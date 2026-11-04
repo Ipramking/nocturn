@@ -7,7 +7,8 @@ export type CheckId =
   | "secrets"
   | "meta"
   | "links"
-  | "lighthouse";
+  | "lighthouse"
+  | "onchain";
 
 export type CheckStatus = "pass" | "warn" | "fail" | "error" | "skipped";
 
@@ -41,6 +42,18 @@ export interface AiNotes {
   source: "gemini" | "fallback";
 }
 
+/** What moved since the previous shift on the same URL ("what changed overnight"). */
+export interface ShiftChanges {
+  previousId: string;
+  previousScore: number;
+  previousAt: string;
+  scoreDelta: number;
+  /** Issues present now that weren't last time. */
+  added: Finding[];
+  /** Issues from last time that are gone now. */
+  resolved: Array<Pick<Finding, "id" | "title" | "severity">>;
+}
+
 export interface ShiftReport {
   id: string;
   url: string;
@@ -51,6 +64,7 @@ export interface ShiftReport {
   grade: "A" | "B" | "C" | "D" | "F";
   checks: CheckResult[];
   ai?: AiNotes;
+  changes?: ShiftChanges;
 }
 
 export type ShiftEvent =
