@@ -1,9 +1,8 @@
-import { writeNotes } from "@/lib/shift/ai";
 import { runShift } from "@/lib/shift/engine";
+import { finishShift } from "@/lib/shift/finish";
 import { BlockedUrlError, normalizeUrl } from "@/lib/shift/safe-fetch";
 import type { ShiftEvent } from "@/lib/shift/types";
 import { clientIp, rateLimited } from "@/lib/site";
-import { saveShift } from "@/lib/store";
 
 export const runtime = "nodejs";
 export const maxDuration = 90;
@@ -28,8 +27,7 @@ export async function POST(req: Request) {
       try {
         const report = await runShift(body.url!, emit);
         emit({ type: "log", line: "Night engineer is writing your Morning Report", level: "info" });
-        report.ai = await writeNotes(report);
-        await saveShift(report).catch(() => emit({ type: "log", line: "Couldn't save the report link", level: "warn" }));
+        await finishShift(report, () => emit({ type: "log", line: "Couldn't save the report link", level: "warn" }));
         emit({ type: "done", report });
       } catch (err) {
         emit({ type: "error", message: err instanceof BlockedUrlError ? err.message : "The shift crashed. Try again." });

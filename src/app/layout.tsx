@@ -1,10 +1,26 @@
 import type { Metadata, Viewport } from "next";
 import { Instrument_Serif, JetBrains_Mono } from "next/font/google";
+import MiniAppReady from "@/components/MiniAppReady";
 import { siteUrl } from "@/lib/site";
 import "./globals.css";
 
 const mono = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["latin"] });
 const display = Instrument_Serif({ variable: "--font-instrument", subsets: ["latin"], weight: "400", style: ["normal", "italic"] });
+
+const miniAppEmbed = JSON.stringify({
+  version: "1",
+  imageUrl: `${siteUrl()}/embed-image`,
+  button: {
+    title: "Clock in",
+    action: {
+      type: "launch_miniapp",
+      name: "NOCTURN",
+      url: siteUrl(),
+      splashImageUrl: `${siteUrl()}/pwa-icon/200`,
+      splashBackgroundColor: "#04060c",
+    },
+  },
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
@@ -17,6 +33,13 @@ export const metadata: Metadata = {
     type: "website",
   },
   twitter: { card: "summary_large_image" },
+  appleWebApp: { capable: true, title: "NOCTURN", statusBarStyle: "black-translucent" },
+  icons: { icon: "/pwa-icon/192", apple: "/pwa-icon/180" },
+  other: {
+    // Farcaster / Base mini app embed: a cast or post of any NOCTURN link opens the app.
+    "fc:miniapp": miniAppEmbed,
+    "fc:frame": miniAppEmbed,
+  },
 };
 
 export const viewport: Viewport = {
@@ -28,7 +51,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${mono.variable} ${display.variable} h-full antialiased`}>
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        {children}
+        <MiniAppReady />
+      </body>
     </html>
   );
 }

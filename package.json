@@ -11,9 +11,11 @@
     "db:migrate": "node --env-file=.env.local scripts/db-migrate.mjs"
   },
   "dependencies": {
+    "@farcaster/miniapp-sdk": "^0.4.0",
     "@neon/config": "^1.10.1",
     "@neon/env": "^1.6.9",
     "@vercel/functions": "^3.10.6",
+    "motion": "^14.9.1",
     "next": "16.4.4",
     "pg": "^8.23.0",
     "react": "19.3.0",

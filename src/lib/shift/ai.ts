@@ -26,12 +26,17 @@ export function templatePrompt(finding: Finding, url: string) {
 export function fallbackNotes(report: ShiftReport): AiNotes {
   const ranked = rankedFindings(report);
   const critical = ranked.filter((f) => f.severity === "critical").length;
-  const headline =
-    critical > 0
-      ? `${critical} urgent issue${critical === 1 ? "" : "s"} need you before anything else`
-      : ranked.length === 0
-        ? "Quiet night. Nothing needed you."
-        : `${ranked.length} thing${ranked.length === 1 ? "" : "s"} to tidy up this morning`;
+  const c = report.changes;
+  const newCritical = c?.added.find((f) => f.severity === "critical");
+  const headline = newCritical
+    ? `New since last night: ${newCritical.title.toLowerCase()}`
+    : c && c.resolved.length && !c.added.length
+      ? `${c.resolved.length} fixed since last night. Score ${c.scoreDelta >= 0 ? "+" : ""}${c.scoreDelta}.`
+      : critical > 0
+        ? `${critical} urgent issue${critical === 1 ? "" : "s"} need you before anything else`
+        : ranked.length === 0
+          ? "Quiet night. Nothing needed you."
+          : `${ranked.length} thing${ranked.length === 1 ? "" : "s"} to tidy up this morning`;
   const top = ranked.slice(0, 3).map((f) => f.title.toLowerCase());
   return {
     headline,
@@ -54,7 +59,11 @@ export async function writeNotes(report: ShiftReport): Promise<AiNotes> {
 App: ${report.finalUrl}
 Shift score: ${report.score}/100 (grade ${report.grade})
 Findings (most severe first): ${JSON.stringify(brief)}
-
+${
+  report.changes
+    ? `Changes since the previous shift (${report.changes.previousAt}): score ${report.changes.scoreDelta >= 0 ? "+" : ""}${report.changes.scoreDelta}; new: ${JSON.stringify(report.changes.added.map((f) => f.title))}; fixed: ${JSON.stringify(report.changes.resolved.map((f) => f.title))}. Lead the headline and summary with what changed overnight.`
+    : ""
+}
 Return JSON only, shaped exactly like:
 {"headline": string, "summary": string, "prompts": {"<finding id>": string}}
 

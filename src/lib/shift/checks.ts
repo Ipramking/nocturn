@@ -6,6 +6,8 @@ export interface ShiftContext {
   url: URL;
   page: SafeResponse;
   log: (line: string, level?: "info" | "warn" | "error") => void;
+  /** JS bundles fetched by the secrets check, shared with the onchain check. */
+  bundles: string[];
 }
 
 const PENALTY: Record<Severity, number> = { critical: 60, high: 30, medium: 15, low: 5, info: 0 };
@@ -18,6 +20,7 @@ export const CHECK_LABELS: Record<CheckId, string> = {
   meta: "Share & SEO readiness",
   links: "Broken links",
   lighthouse: "Lighthouse (mobile)",
+  onchain: "Onchain (Base)",
 };
 
 export function result(
@@ -206,7 +209,7 @@ function sameSite(a: URL, b: URL) {
   return root(a.hostname) === root(b.hostname);
 }
 
-export async function checkSecrets({ page, log }: ShiftContext): Promise<CheckResult> {
+export async function checkSecrets({ page, log, bundles }: ShiftContext): Promise<CheckResult> {
   const started = performance.now();
   const base = new URL(page.url);
   const seen = new Set<string>();
@@ -248,6 +251,7 @@ export async function checkSecrets({ page, log }: ShiftContext): Promise<CheckRe
       scanned++;
       bytes += r.value.bytes;
       const js = r.value.body;
+      bundles.push(js);
       const name = new URL(batch[i]).pathname.split("/").pop() || batch[i];
       findings.push(...scanForSecrets(js, name, seen));
       for (const ref of chunkRefs(js)) enqueue(ref.startsWith("/") ? ref : `/${ref.replace(/^\.\//, "")}`, base);
@@ -429,4 +433,87 @@ export async function checkLighthouse({ url, log }: Pick<ShiftContext, "url" | "
     lcp: audits["largest-contentful-paint"]?.displayValue ?? "n/a",
     cls: audits["cumulative-layout-shift"]?.displayValue ?? "n/a",
   }, avg);
+}
+
+// ---------------------------------------------------------------- onchain (Base)
+
+const ADDRESS = /\b0x[a-fA-F0-9]{40}(?![a-fA-F0-9])/g;
+const WEB3_HINT = /eth_requestAccounts|wagmi|onchainkit|walletconnect|rainbowkit|coinbase\/wallet|mainnet\.base\.org|basescan\.org|sepolia\.base\.org/i;
+const CONTRACT_HINT = /abi|contract|address|token|nft|mint|vault|pool|router/i;
+// Well-known infrastructure addresses that ship inside wallet libraries.
+const KNOWN = new Set([
+  "0x0000000000000000000000000000000000000000",
+  "0x000000000000000000000000000000000000dead",
+  "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "0xca11bde05977b3631167028862be2a173976ca11", // multicall3
+  "0x000000000022d473030f116ddee9f6b43ac78ba3", // permit2
+]);
+const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+
+interface BlockscoutAddress {
+  is_contract?: boolean;
+  is_verified?: boolean;
+  name?: string | null;
+  proxy_type?: string | null;
+  implementations?: Array<{ address?: string; address_hash?: string }>;
+}
+
+async function lookupBase(address: string): Promise<BlockscoutAddress | null> {
+  const res = await fetch(`https://base.blockscout.com/api/v2/addresses/${address}`, {
+    headers: { accept: "application/json" },
+    signal: AbortSignal.timeout(9000),
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`blockscout ${res.status}`);
+  return res.json();
+}
+
+export async function checkOnchain({ page, bundles, log }: ShiftContext): Promise<CheckResult> {
+  const started = performance.now();
+  const text = [page.body, ...bundles].join("\n");
+  const usesWeb3 = WEB3_HINT.test(text);
+
+  // Rank candidate addresses: repeated ones and ones near contract-ish words first.
+  const scored = new Map<string, number>();
+  for (const m of text.matchAll(ADDRESS)) {
+    const a = m[0].toLowerCase();
+    if (KNOWN.has(a) || a.startsWith("0x4200000000000000000000000000000000") || a.startsWith("0x00000000")) continue;
+    const at = m.index ?? 0;
+    const near = CONTRACT_HINT.test(text.slice(Math.max(0, at - 120), at + 160)) ? 3 : 0;
+    scored.set(a, (scored.get(a) ?? 0) + 1 + near);
+  }
+  if (!usesWeb3 && scored.size === 0) return skipped("onchain", "No onchain activity detected");
+
+  const candidates = [...scored.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([a]) => a);
+  const looked = await Promise.allSettled(candidates.map(lookupBase));
+  const contracts: Array<{ address: string; info: BlockscoutAddress }> = [];
+  let lookupErrors = 0;
+  looked.forEach((r, i) => {
+    if (r.status === "rejected") lookupErrors++;
+    else if (r.value?.is_contract) contracts.push({ address: candidates[i], info: r.value });
+  });
+  log(`Checked ${candidates.length} address${candidates.length === 1 ? "" : "es"} on Base: ${contracts.length} contract${contracts.length === 1 ? "" : "s"}`);
+  if (candidates.length && lookupErrors === candidates.length) return skipped("onchain", "Base explorer didn't answer, try again later", "error");
+
+  const findings: Finding[] = [];
+  const unverified = contracts.filter((c) => !c.info.is_verified);
+  if (unverified.length) {
+    findings.push(f("onchain", "unverified", "medium", `${unverified.length} unverified contract${unverified.length === 1 ? "" : "s"} on Base`, "Your app talks to contracts whose source isn't published, so users and wallets can't see what they're signing. Backers and judges notice.", "Verify the source on Basescan or Blockscout (`forge verify-contract` with Foundry, `npx hardhat verify` with Hardhat).", unverified.map((c) => short(c.address)).join(", ")));
+  }
+  const proxies = contracts.filter((c) => c.info.proxy_type || c.info.implementations?.length);
+  if (proxies.length) {
+    findings.push(f("onchain", "proxy", "low", `${proxies.length} upgradeable proxy contract${proxies.length === 1 ? "" : "s"}`, "Whoever controls the proxy can swap the code behind it after users have trusted it.", "Say so in your docs, and put upgrades behind a multisig or timelock.", proxies.map((c) => `${short(c.address)}${c.info.name ? ` (${c.info.name})` : ""}`).join(", ")));
+  }
+  if (contracts.length === 0 && /84532|sepolia\.base\.org|base-sepolia/i.test(text)) {
+    findings.push(f("onchain", "testnet", "low", "Live app points at Base Sepolia (testnet)", "Your production site is wired to a testnet, so real users' transactions won't land on Base mainnet.", "Switch the chain config to Base mainnet (chain id 8453) for production, or label the app clearly as a testnet demo."));
+  }
+
+  const verified = contracts.length - unverified.length;
+  return result(
+    "onchain",
+    started,
+    findings,
+    contracts.length ? `${contracts.length} Base contract${contracts.length === 1 ? "" : "s"}, all verified` : "Web3 app, no Base contracts referenced",
+    { addresses: candidates.length, contracts: contracts.length, verified },
+  );
 }

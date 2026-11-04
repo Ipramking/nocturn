@@ -10,6 +10,8 @@ interface Pattern {
 }
 
 const ROTATE = "Rotate it now in the provider's dashboard, then move the call behind a server route so the key never ships to the browser.";
+const RPC_FIX =
+  "dApps often ship an RPC URL to the browser, but anyone can copy this one and burn your quota. Lock it to your domains in the provider's dashboard (allowlist), or proxy RPC calls through a server route.";
 
 const PATTERNS: Pattern[] = [
   { name: "Anthropic API key", re: /sk-ant-[A-Za-z0-9_-]{32,}/g, severity: "critical", fix: ROTATE },
@@ -38,6 +40,9 @@ const PATTERNS: Pattern[] = [
   { name: "Brevo API key", re: /\bxkeysib-[a-f0-9]{64}-[A-Za-z0-9]{16}/g, severity: "high", fix: ROTATE },
   { name: "SendGrid API key", re: /\bSG\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43}/g, severity: "high", fix: ROTATE },
   { name: "Hugging Face token", re: /\bhf_[A-Za-z0-9]{34,}/g, severity: "high", fix: ROTATE },
+  { name: "Alchemy RPC key", re: /https?:\/\/[a-z0-9-]+\.g\.alchemy\.com\/v2\/[A-Za-z0-9_-]{24,}/g, severity: "medium", fix: RPC_FIX },
+  { name: "Infura RPC key", re: /https?:\/\/[a-z0-9-]+\.infura\.io\/v3\/[a-f0-9]{32}/g, severity: "medium", fix: RPC_FIX },
+  { name: "QuickNode endpoint", re: /https?:\/\/[a-z0-9-]+\.[a-z0-9-]+\.quiknode\.pro\/[a-f0-9]{30,}/g, severity: "medium", fix: RPC_FIX },
   {
     name: "Private key block",
     re: /-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY-----/g,

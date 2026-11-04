@@ -4,6 +4,7 @@ import {
   checkLighthouse,
   checkLinks,
   checkMeta,
+  checkOnchain,
   checkSecrets,
   checkTls,
   checkUptime,
@@ -22,9 +23,10 @@ const WEIGHTS: Record<CheckId, number> = {
   meta: 10,
   links: 10,
   lighthouse: 10,
+  onchain: 10,
 };
 
-export const CHECK_ORDER: CheckId[] = ["uptime", "tls", "headers", "secrets", "meta", "links", "lighthouse"];
+export const CHECK_ORDER: CheckId[] = ["uptime", "tls", "headers", "secrets", "meta", "links", "onchain", "lighthouse"];
 
 export function newShiftId() {
   return randomBytes(6).toString("base64url");
@@ -95,19 +97,26 @@ export async function runShift(input: string, emit: (e: ShiftEvent) => void, id 
       ],
       ms: 0,
     });
-    for (const check of ["tls", "headers", "secrets", "meta", "links"] as CheckId[]) {
+    for (const check of ["tls", "headers", "secrets", "meta", "links", "onchain"] as CheckId[]) {
       settle(skipped(check, "Skipped, site unreachable"));
     }
     await lighthouse;
     return finish();
   }
 
-  const ctx = (check: CheckId): ShiftContext => ({ url, page, log: logFor(check) });
+  const bundles: string[] = [];
+  const ctx = (check: CheckId): ShiftContext => ({ url, page, log: logFor(check), bundles });
+  // The onchain check reads the bundles the secrets check downloads, so it waits for it.
+  const secrets = guard("secrets", () => checkSecrets(ctx("secrets")));
   await Promise.all([
     guard("uptime", () => checkUptime(ctx("uptime"))),
     guard("tls", () => checkTls(ctx("tls"))),
     guard("headers", () => checkHeaders(ctx("headers"))),
-    guard("secrets", () => checkSecrets(ctx("secrets"))),
+    secrets,
+    guard("onchain", async () => {
+      await secrets;
+      return checkOnchain(ctx("onchain"));
+    }),
     guard("meta", () => checkMeta(ctx("meta"))),
     guard("links", () => checkLinks(ctx("links"))),
     lighthouse,

@@ -1,0 +1,34 @@
+# NOCTURN
+
+> The night shift for your vibecoded app. Paste a live URL; NOCTURN runs a real, read-only "night shift" against it and hands back a Morning Report: a score, what needs you first, and a paste-ready AI fix prompt for every issue. Built for Vibeathon 02 ("Night shift") on Vibestarter.
+
+## What to try (fastest first)
+- Sample Morning Report, no waiting: https://nocturn-fawn.vercel.app/sample
+- Run a shift on a deliberately leaky demo app (fake keys, caught as critical): open https://nocturn-fawn.vercel.app and tap "Try a leaky demo"
+- Run a shift on your own app: paste its URL on https://nocturn-fawn.vercel.app and press CLOCK IN (about 30-40 seconds; the night time-lapse plays while the checks really run)
+- NOCTURN on itself: it scores 100/100 on every check, including Lighthouse
+
+## What a shift checks
+- Uptime and latency (time to first byte, redirects)
+- TLS and HTTPS (certificate trust and expiry, TLS version, HTTP to HTTPS redirect)
+- Security headers (CSP, HSTS, clickjacking, nosniff, referrer policy, cookie flags, stack leaks)
+- Leaked secrets in client JavaScript bundles (OpenAI, Anthropic, Gemini, Stripe, AWS, GitHub, Supabase service-role, wallet private keys, Alchemy/Infura/QuickNode RPC keys, public source maps); always masked
+- Onchain (Base): contract addresses the app talks to, checked on Base for verified source, upgradeable proxies and testnet wiring
+- Share and SEO readiness (viewport, title, og:image, twitter card, noindex, empty-until-JS pages)
+- Broken internal links
+- Lighthouse on mobile via PageSpeed Insights
+
+## Beyond one shift
+- Night Watch: a nightly shift with "what changed overnight" (new issues, fixed issues, score change), delivered on the watch page and by Telegram (and email when configured)
+- Shareable report pages with share cards for X and Farcaster
+- "Watched by NOCTURN" badge: https://nocturn-fawn.vercel.app/badge/<your-host>
+
+## For agents
+- POST https://nocturn-fawn.vercel.app/api/shift with JSON {"url": "<live url>"} streams the shift as NDJSON events (start, log, check, done). The final "done" event contains the full report.
+- GET https://nocturn-fawn.vercel.app/r/<id> is the human-readable report.
+
+## Safety
+Read-only GET requests only. Private, loopback and cloud-metadata addresses are refused at DNS level on every connection, including redirects. Secrets that are found are masked everywhere and never stored in full.
+
+## Built with
+Claude Code (Anthropic) for building the app; Google Gemini inside the product to write Morning Reports and fix prompts; Next.js, Tailwind, Neon Postgres, Vercel.
