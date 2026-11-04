@@ -38,7 +38,7 @@ interface Layer {
 const LAYERS = [
   { minW: 26, maxW: 60, minH: 0.35, maxH: 0.7, gap: 3, speed: 3, parallax: 4, alpha: 0.45, win: { w: 2, h: 3, sx: 6, sy: 7 }, night: [9, 14, 30], day: [74, 48, 84] },
   { minW: 34, maxW: 80, minH: 0.3, maxH: 0.85, gap: 4, speed: 6, parallax: 9, alpha: 0.7, win: { w: 3, h: 4, sx: 8, sy: 9 }, night: [6, 9, 18], day: [44, 26, 54] },
-  { minW: 44, maxW: 110, minH: 0.25, maxH: 1, gap: 5, speed: 11, parallax: 16, alpha: 1, win: { w: 4, h: 5, sx: 10, sy: 11 }, night: [3, 5, 10], day: [22, 13, 31] },
+  { minW: 44, maxW: 110, minH: 0.25, maxH: 1, gap: 5, speed: 11, parallax: 16, alpha: 1, win: { w: 5, h: 6, sx: 11, sy: 12 }, night: [3, 5, 10], day: [22, 13, 31] },
 ];
 
 const PHOSPHOR = [92, 255, 161];

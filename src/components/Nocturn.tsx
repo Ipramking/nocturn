@@ -145,7 +145,7 @@ export default function Nocturn({ initialUrl = "" }: { initialUrl?: string }) {
   };
 
   const dawn = phase === "dawn" || phase === "morning" ? 1 : 0;
-  const lit = phase === "idle" || phase === "error" ? 0.12 : 0.12 + (doneCount / CHECKS.length) * 0.7;
+  const lit = phase === "idle" || phase === "error" ? 0.38 : 0.38 + (doneCount / CHECKS.length) * 0.55;
 
   return (
     <main className="relative min-h-dvh px-4 pb-[28vh] sm:px-6">
