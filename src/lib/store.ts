@@ -139,3 +139,128 @@ export async function activeWatches(limit = 50): Promise<Watch[]> {
   }
   return Object.values(await readFile<Watch>("watches.json")).filter((w) => w.active).slice(0, limit);
 }
+
+// Night Board: anonymous activity. Never returns a URL, host or id.
+
+export interface BoardShift {
+  at: string;
+  score: number;
+  grade: ShiftReport["grade"];
+  hostKind: string;
+  issues: number;
+  criticals: number;
+  leaksCaught: number;
+}
+
+export interface BoardTotals {
+  shifts: number;
+  watches: number;
+  leaksCaught: number;
+}
+
+const HOST_KINDS: Array<[string, string]> = [
+  ["vercel.app", "a Vercel app"],
+  ["netlify.app", "a Netlify app"],
+  ["pages.dev", "a Cloudflare Pages app"],
+  ["github.io", "a GitHub Pages app"],
+  ["onrender.com", "a Render app"],
+  ["railway.app", "a Railway app"],
+  ["fly.dev", "a Fly app"],
+];
+
+/** The platform an app runs on, from its host suffix. The only trace of the host the board keeps. */
+export function hostKind(host: string) {
+  const h = host.toLowerCase().replace(/\.$/, "");
+  return HOST_KINDS.find(([suffix]) => h === suffix || h.endsWith(`.${suffix}`))?.[1] ?? "a custom-domain app";
+}
+
+// The built-in leaky demo would flood the board with fake leaks.
+const DEMO_PATH = "/demo/leaky";
+
+type BoardFinding = ShiftReport["checks"][number]["findings"][number];
+const isLeak = (f: BoardFinding) => f.check === "secrets" && (f.severity === "critical" || f.severity === "high");
+// Minute precision is all the ticker shows; keep nothing finer.
+const toMinute = (at: string | Date) => new Date(Math.floor(new Date(at).getTime() / 60_000) * 60_000).toISOString();
+
+function hostOf(url: string) {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return "";
+  }
+}
+
+function toBoardShift(r: ShiftReport): BoardShift {
+  const findings = r.checks.flatMap((c) => c.findings);
+  return {
+    at: toMinute(r.finishedAt),
+    score: r.score,
+    grade: r.grade,
+    hostKind: hostKind(hostOf(r.finalUrl)),
+    issues: findings.filter((f) => f.severity !== "info").length,
+    criticals: findings.filter((f) => f.severity === "critical").length,
+    leaksCaught: findings.filter(isLeak).length,
+  };
+}
+
+async function localBoardReports() {
+  return Object.values(await readFile<ShiftReport>("shifts.json")).filter((r) => !r.finalUrl.includes(DEMO_PATH));
+}
+
+export async function recentShifts(limit = 12): Promise<BoardShift[]> {
+  if (pool) {
+    const { rows } = await pool.query<{ url: string; created_at: Date; score: number; grade: ShiftReport["grade"]; issues: number; criticals: number; leaks: number }>(
+      `select s.url, s.created_at, s.score, s.grade, f.issues, f.criticals, f.leaks
+       from shifts s
+       cross join lateral (
+         select count(*) filter (where x->>'severity' <> 'info')::int as issues,
+                count(*) filter (where x->>'severity' = 'critical')::int as criticals,
+                count(*) filter (where c->>'check' = 'secrets' and x->>'severity' in ('critical', 'high'))::int as leaks
+         from jsonb_array_elements(s.report->'checks') c
+         cross join lateral jsonb_array_elements(c->'findings') x
+       ) f
+       where position($2 in s.url) = 0
+       order by s.created_at desc
+       limit $1`,
+      [limit, DEMO_PATH],
+    );
+    return rows.map((r) => ({
+      at: toMinute(r.created_at),
+      score: r.score,
+      grade: r.grade,
+      hostKind: hostKind(hostOf(r.url)),
+      issues: r.issues,
+      criticals: r.criticals,
+      leaksCaught: r.leaks,
+    }));
+  }
+  return (await localBoardReports())
+    .sort((a, b) => b.finishedAt.localeCompare(a.finishedAt))
+    .slice(0, limit)
+    .map(toBoardShift);
+}
+
+export async function boardTotals(): Promise<BoardTotals> {
+  if (pool) {
+    const { rows } = await pool.query<BoardTotals>(
+      `select
+         (select count(*) from shifts where position($1 in url) = 0)::int as shifts,
+         (select count(*) from watches where active)::int as watches,
+         (select count(*)
+            from shifts s
+            cross join lateral jsonb_array_elements(s.report->'checks') c
+            cross join lateral jsonb_array_elements(c->'findings') x
+           where position($1 in s.url) = 0
+             and c->>'check' = 'secrets' and x->>'severity' in ('critical', 'high'))::int as "leaksCaught"`,
+      [DEMO_PATH],
+    );
+    return rows[0] ?? { shifts: 0, watches: 0, leaksCaught: 0 };
+  }
+  const reports = await localBoardReports();
+  const watches = Object.values(await readFile<Watch>("watches.json")).filter((w) => w.active).length;
+  return {
+    shifts: reports.length,
+    watches,
+    leaksCaught: reports.reduce((n, r) => n + r.checks.flatMap((c) => c.findings).filter(isLeak).length, 0),
+  };
+}
