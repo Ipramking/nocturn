@@ -57,9 +57,10 @@ function suggestions(report: ShiftReport) {
     .filter((f) => f.severity !== "info")
     .sort((a, b) => RANK[a.severity] - RANK[b.severity])
     .slice(0, 3);
-  return top.length
+  const asks = top.length
     ? top.map((f) => `How do I fix: ${f.title}?`)
     : ["What did the shift check?", "How do I keep this score up?"];
+  return report.changes ? [...asks, "What changed since the last shift?"] : asks;
 }
 
 // Fenced code splits the reply; everything else stays plain text.
