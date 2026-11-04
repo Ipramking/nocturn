@@ -138,3 +138,95 @@ export function chunkRefs(js: string): string[] {
   for (const m of js.matchAll(re)) out.add(m[1]);
   return [...out];
 }
+
+// Paste safety: things people paste into a chat that the bundle scanner doesn't look for.
+const DB_URL_RE = /\b(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|rediss?|amqps?):\/\/[^\s:/@]+:[^\s@/]{3,}@[^\s/]+/g;
+const ASSIGNED_SECRET_RE = /\b[A-Z0-9_]*(?:SECRET|PASSWORD|PASSWD|TOKEN|API_?KEY|PRIVATE_?KEY)[A-Z0-9_]*\s*[:=]\s*["']?([^\s"'`;,)]{12,})/gi;
+// Passwords are short and low-entropy, so only env-style lines (DB_PASSWORD=…) and quoted literals count.
+const PASSWORD_RE = /^\s*(?:export\s+)?[\w.-]*pass(?:word|wd)\s*[:=]\s*["']?([^\s"']{6,})["']?\s*$|\bpass(?:word|wd)["']?\s*[:=]\s*["']([^"'\s]{6,})["']/gim;
+const WORD_RUN_RE = /\b[a-z]{3,8}(?:\s+[a-z]{3,8}){11,}\b/g;
+const PEM_BLOCK_RE = /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/g;
+const REFERENCE_RE = /^(?:process\.env|import\.meta|env\.|\$|<|\{|\[redacted)/;
+const PLACEHOLDER_RE = /x{6,}|\*{3,}|0{8,}|1234567|example|your|placeholder|dummy|changeme|password|secret|redacted|\.\.\./i;
+
+function pasteFinding(name: string, evidence: string, fix: string): Finding {
+  return {
+    id: `paste:${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+    check: "secrets",
+    severity: "critical",
+    title: name,
+    detail: "Found in your message.",
+    evidence,
+    fix,
+  };
+}
+
+// Values the provider patterns already judged (a Firebase web key, a Supabase anon JWT) are left to them.
+const knownToken = (v: string) => PATTERNS.some((p) => new RegExp(p.re.source).test(v)) || new RegExp(JWT_RE.source).test(v);
+// An assigned value that is a real secret, not a reference like process.env.X, code or a placeholder.
+const realSecret = (v: string) => !REFERENCE_RE.test(v) && !knownToken(v) && /\d/.test(v) && /[a-z]/i.test(v) && !looksFake(v);
+const realPassword = (v: string) => !REFERENCE_RE.test(v) && !PLACEHOLDER_RE.test(v);
+
+function seedPhraseRun(text: string) {
+  if (!/seed|mnemonic|recovery|phrase|wallet/i.test(text)) {
+    // Without a hint, only a message that is nothing but the word list counts.
+    const words = text.trim().split(/\s+/);
+    return [12, 15, 18, 21, 24].includes(words.length) && words.every((w) => /^[a-z]{3,8}$/.test(w)) ? text.trim() : null;
+  }
+  for (const m of text.matchAll(WORD_RUN_RE)) {
+    const n = m[0].split(/\s+/).length;
+    if (n >= 12 && n <= 24) return m[0];
+  }
+  return null;
+}
+
+/** Secrets in something a person is about to send (a chat message). Pure; safe in the browser. */
+export function checkPasteSafety(text: string): Finding[] {
+  const found = scanForSecrets(text, "your message", new Set()).filter((f) => f.severity !== "info");
+  for (const m of text.matchAll(DB_URL_RE)) {
+    found.push(pasteFinding("Database URL with a password", mask(m[0]), "Change the database password now and keep the URL in your host's environment settings."));
+  }
+  const assigned = [...text.matchAll(ASSIGNED_SECRET_RE)].map((m) => m[1]).find(realSecret);
+  if (assigned) found.push(pasteFinding("Secret value", mask(assigned), ROTATE));
+  const password = [...text.matchAll(PASSWORD_RE)].map((m) => m[1] ?? m[2]).find(realPassword);
+  if (password && !assigned) {
+    found.push(pasteFinding("Password", `${password.length} characters`, "Change that password now, everywhere you used it."));
+  }
+  const seed = seedPhraseRun(text);
+  if (seed) {
+    found.push(pasteFinding("Wallet seed phrase", `${seed.split(/\s+/).length} words`, "Move everything this phrase controls to a fresh wallet now."));
+  }
+  return found;
+}
+
+const nameOf = (f: Finding) => f.title.replace(/ exposed in client code$/, "").replace(/^(Private|Wallet|Secret|Database|Password)/, (s) => s.toLowerCase());
+const article = (s: string) => (/^[aeiou]/i.test(s) ? "an" : "a");
+
+/** The warning shown instead of sending a message that carries a secret. */
+export function pasteBlockedMessage(findings: Finding[]) {
+  const named = findings.slice(0, 3).map((f) => `${article(nameOf(f))} ${nameOf(f)} (${f.evidence ?? "masked"})`);
+  const list = named.length > 1 ? `${named.slice(0, -1).join(", ")} and ${named.at(-1)}` : named[0];
+  const funds = findings.some((f) => /wallet|private key/i.test(f.title));
+  return [
+    `That looks like ${list}.`,
+    "NOCTURN stopped it before it went anywhere: it was not sent to the AI and not saved.",
+    funds
+      ? "Treat it as compromised: delete it from wherever you pasted it and move anything it controls to a fresh key now."
+      : "Delete it from wherever you pasted it and rotate it now in the provider's dashboard.",
+  ].join(" ");
+}
+
+/** Mask every key-shaped token before text goes to a third party. Deliberately broad. */
+export function redactSecrets(text: string) {
+  let out = text.replace(PEM_BLOCK_RE, "[private key removed]");
+  out = out.replace(DB_URL_RE, (m) => `[redacted ${mask(m)}]`);
+  for (const p of PATTERNS) out = out.replace(p.re, (m) => `[redacted ${mask(m)}]`);
+  out = out.replace(JWT_RE, (m) => `[redacted ${mask(m)}]`);
+  out = out.replace(ASSIGNED_SECRET_RE, (m, v: string) => (realSecret(v) ? m.replace(v, `[redacted ${mask(v)}]`) : m));
+  out = out.replace(PASSWORD_RE, (m, a?: string, b?: string) => {
+    const v = a ?? b;
+    return v && realPassword(v) ? m.replace(v, "[password removed]") : m;
+  });
+  const seed = seedPhraseRun(out);
+  return seed ? out.replace(seed, "[seed phrase removed]") : out;
+}
