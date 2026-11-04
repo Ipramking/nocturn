@@ -158,7 +158,7 @@ export default function Report({ report, shareUrl }: { report: ShiftReport; shar
         )}
       </header>
 
-      <section aria-label="Checks" className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section aria-label="Checks" className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {report.checks.map((c) => (
           <div key={c.check} className="panel rounded-xl p-4">
             <div className="flex items-center gap-2">

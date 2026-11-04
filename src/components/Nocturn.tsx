@@ -159,7 +159,7 @@ export default function Nocturn({ initialUrl = "" }: { initialUrl?: string }) {
 
       {(phase === "idle" || phase === "error") && (
         <section className="rise mx-auto flex max-w-3xl flex-col items-center pt-[8vh] text-center">
-          <p className="text-[11px] tracking-[0.35em] text-phosphor">THE NIGHT SHIFT FOR YOUR VIBECODED APP</p>
+          <p className="text-[11px] tracking-[0.22em] text-phosphor sm:tracking-[0.35em]">THE NIGHT SHIFT FOR YOUR VIBECODED APP</p>
           <h1 className="mt-5 font-display text-5xl leading-[1.02] text-text sm:text-7xl">
             You ship. You sleep.
             <br />
@@ -197,12 +197,12 @@ export default function Nocturn({ initialUrl = "" }: { initialUrl?: string }) {
             }}
             className="mt-3 min-h-10 rounded-full border border-danger/40 px-4 text-xs text-danger transition hover:bg-danger/10"
           >
-            No app handy? Watch it catch a leaky demo app →
+            No app handy? Try a leaky demo →
           </button>
 
           <ul className="mt-14 grid w-full grid-cols-1 gap-2 text-left sm:grid-cols-2">
             {CHECKS.map((c) => (
-              <li key={c.id} className="panel flex items-start gap-3 rounded-xl px-4 py-3">
+              <li key={c.id} className="panel flex items-start gap-3 rounded-xl px-4 py-3 sm:last:col-span-2">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-phosphor" />
                 <span>
                   <span className="block text-sm text-text">{c.label}</span>

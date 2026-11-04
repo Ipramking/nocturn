@@ -24,7 +24,7 @@ export default async function ReportPage({ params }: PageProps<"/r/[id]">) {
   return (
     <main className="relative min-h-dvh px-4 pb-[28vh] sm:px-6">
       <Sky progress={1} dawn={1} />
-      <Skyline lit={0.82} dawn={1} />
+      <Skyline lit={0.82} dawn={1} fixed={false} />
       <nav className="mx-auto flex max-w-4xl items-center justify-between py-5">
         <Link href="/" className="min-h-10 text-sm font-bold tracking-[0.35em] text-phosphor glow">NOCTURN</Link>
         <Link href={`/?url=${encodeURIComponent(host)}`} className="text-xs tracking-wider text-muted hover:text-phosphor">

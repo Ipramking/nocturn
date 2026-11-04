@@ -83,7 +83,7 @@ export default function Sky({ progress, dawn }: Props) {
       // Moon travels a low arc across the night.
       const p = live.progress;
       const mx = w * (0.08 + 0.84 * p);
-      const my = h * (0.62 - 0.42 * Math.sin(Math.PI * p));
+      const my = h * (0.36 - 0.27 * Math.sin(Math.PI * p));
       const halo = ctx.createRadialGradient(mx, my, 0, mx, my, 120);
       halo.addColorStop(0, `rgba(200,255,225,${0.22 * (1 - d)})`);
       halo.addColorStop(1, "rgba(200,255,225,0)");

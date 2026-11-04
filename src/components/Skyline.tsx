@@ -12,7 +12,7 @@ function seeded(seed: number) {
   };
 }
 
-export default function Skyline({ lit, dawn }: { lit: number; dawn: number }) {
+export default function Skyline({ lit, dawn, fixed = true }: { lit: number; dawn: number; fixed?: boolean }) {
   const { buildings, windows } = useMemo(() => {
     const rand = seeded(42);
     const buildings: Array<{ x: number; w: number; h: number }> = [];
@@ -34,7 +34,7 @@ export default function Skyline({ lit, dawn }: { lit: number; dawn: number }) {
 
   const shade = dawn > 0.5 ? "#140d1f" : "#03050a";
   return (
-    <svg aria-hidden viewBox="0 0 1200 200" preserveAspectRatio="xMidYMax slice" className="pointer-events-none fixed inset-x-0 bottom-0 -z-10 h-[24vh] w-full">
+    <svg aria-hidden viewBox="0 0 1200 200" preserveAspectRatio="xMidYMax slice" className={`pointer-events-none ${fixed ? "fixed" : "absolute"} inset-x-0 bottom-0 -z-10 h-[24vh] w-full`}>
       {buildings.map((b, i) => (
         <rect key={i} x={b.x} y={200 - b.h} width={b.w} height={b.h} fill={shade} style={{ transition: "fill 3s" }} />
       ))}
