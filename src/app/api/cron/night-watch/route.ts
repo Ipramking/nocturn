@@ -1,8 +1,8 @@
 import { deliverMorningReport, type Delivery } from "@/lib/notify";
-import { writeNotes } from "@/lib/shift/ai";
 import { runShift } from "@/lib/shift/engine";
+import { finishShift } from "@/lib/shift/finish";
 import { siteUrl } from "@/lib/site";
-import { activeWatches, saveShift, saveWatch, type Watch } from "@/lib/store";
+import { activeWatches, saveWatch, type Watch } from "@/lib/store";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -20,9 +20,7 @@ export async function GET(req: Request) {
 
   const work = async (watch: Watch) => {
     try {
-      const report = await runShift(watch.url, () => {});
-      report.ai = await writeNotes(report);
-      await saveShift(report);
+      const report = await finishShift(await runShift(watch.url, () => {}));
       watch.lastShiftId = report.id;
       await saveWatch(watch);
       results.push({ id: watch.id, score: report.score, delivery: await deliverMorningReport(watch, report, base) });

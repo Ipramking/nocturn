@@ -46,3 +46,6 @@ next-env.d.ts
 .neon
 
 .vercel
+
+# agent worktrees and local tooling
+/.claude/
