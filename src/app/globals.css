@@ -12,6 +12,17 @@
   --color-amber: #ffc261;
   --color-danger: #ff6b7a;
   --color-dawn: #ff9a6b;
+
+  /* Morning: warm paper and ink. Status hues are darkened to hold AA on cream. */
+  --color-cream: #f3ede1;
+  --color-paper: #faf6ee;
+  --color-ink-soft: #1c1914;
+  --color-ink-muted: #5d564b;
+  --color-rule: #ddd3c1;
+  --color-moss: #1a6b40;
+  --color-ochre: #8a5a00;
+  --color-brick: #b4232f;
+
   --font-mono: var(--font-jetbrains), ui-monospace, Menlo, monospace;
   --font-display: var(--font-instrument), Georgia, serif;
 }
@@ -27,9 +38,30 @@ body {
   overflow-x: hidden;
 }
 
+/* Morning pages flip the document to paper so overscroll and form controls match. */
+html:has(.tone-light) {
+  color-scheme: light;
+}
+body:has(.tone-light) {
+  background: var(--color-cream);
+  color: var(--color-ink-soft);
+}
+
 ::selection {
   background: var(--color-phosphor);
   color: var(--color-ink);
+}
+.tone-light ::selection {
+  background: var(--color-ink-soft);
+  color: var(--color-cream);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-phosphor);
+  outline-offset: 3px;
+}
+.tone-light :focus-visible {
+  outline-color: var(--color-ink-soft);
 }
 
 .glow {
@@ -82,9 +114,54 @@ body {
   animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
+/* Morning paper: cream with a low sunrise glow and a faint grain. */
+.paper-bg {
+  background:
+    radial-gradient(120% 60% at 72% -8%, rgb(255 178 122 / 0.32), transparent 62%),
+    radial-gradient(80% 40% at 10% -10%, rgb(255 214 160 / 0.28), transparent 70%),
+    var(--color-cream);
+}
+.paper-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .38 0 0 0 0 .28 0 0 0 .18 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* 3D check cards. */
+.card-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* A phosphor sweep across cards still being checked. */
+@keyframes sweep {
+  from {
+    transform: translateY(-110%);
+  }
+  to {
+    transform: translateY(260%);
+  }
+}
+.sweep {
+  animation: sweep 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rise,
-  .caret::after {
+  .caret::after,
+  .sweep {
     animation: none;
+  }
+  .sweep {
+    opacity: 0;
   }
 }
