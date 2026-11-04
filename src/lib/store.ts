@@ -61,6 +61,35 @@ export async function getShift(id: string): Promise<ShiftReport | null> {
   return (await readFile<ShiftReport>("shifts.json"))[id] ?? null;
 }
 
+/** The most recent earlier shift for the same URL, for overnight diffs. */
+export async function previousShift(url: string, excludeId: string): Promise<ShiftReport | null> {
+  if (pool) {
+    const { rows } = await pool.query<{ report: ShiftReport }>(
+      "select report from shifts where url = $1 and id <> $2 order by created_at desc limit 1",
+      [url, excludeId],
+    );
+    return rows[0]?.report ?? null;
+  }
+  return (
+    Object.values(await readFile<ShiftReport>("shifts.json"))
+      .filter((r) => r.finalUrl === url && r.id !== excludeId)
+      .sort((a, b) => b.finishedAt.localeCompare(a.finishedAt))[0] ?? null
+  );
+}
+
+/** Latest shift for a URL, used by the public badge. */
+export async function latestShift(url: string): Promise<Pick<ShiftReport, "id" | "score" | "grade" | "finishedAt"> | null> {
+  if (pool) {
+    const { rows } = await pool.query<Pick<ShiftReport, "id" | "score" | "grade" | "finishedAt">>(
+      `select id, score, grade, report->>'finishedAt' as "finishedAt" from shifts where url = $1 order by created_at desc limit 1`,
+      [url],
+    );
+    return rows[0] ?? null;
+  }
+  const [latest] = await shiftHistory(url, 1);
+  return latest ?? null;
+}
+
 type HistoryRow = Pick<ShiftReport, "id" | "score" | "grade" | "finishedAt">;
 
 export async function shiftHistory(url: string, limit = 14): Promise<HistoryRow[]> {

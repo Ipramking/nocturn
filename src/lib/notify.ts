@@ -1,4 +1,5 @@
 import { rankedFindings } from "./shift/ai";
+import { changeLine } from "./shift/changes";
 import type { ShiftReport } from "./shift/types";
 import type { Watch } from "./store";
 
@@ -52,11 +53,18 @@ export async function deliverMorningReport(watch: Watch, report: ShiftReport, si
 
   const jobs: Promise<void>[] = [];
   if (channels.telegram && watch.telegramChatId) {
+    const c = report.changes;
     const text = [
       `<b>NOCTURN · Morning Report</b>`,
       `${esc(host)} scored <b>${report.score}/100</b> (${report.grade})`,
       esc(headline),
-      ...top.map((f) => `• ${esc(f.title)}`),
+      ...(c
+        ? [
+            `<b>What changed overnight:</b> ${esc(changeLine(c))}`,
+            ...c.added.slice(0, 2).map((f) => `🆕 ${esc(f.title)}`),
+            ...c.resolved.slice(0, 2).map((f) => `✅ Fixed: ${esc(f.title)}`),
+          ]
+        : top.map((f) => `• ${esc(f.title)}`)),
       `<a href="${link}">Open the full report</a>`,
     ].join("\n");
     jobs.push(
@@ -71,6 +79,7 @@ export async function deliverMorningReport(watch: Watch, report: ShiftReport, si
       <p style="color:#5cffa1;letter-spacing:.2em;font-size:12px;margin:0 0 12px">NOCTURN · MORNING REPORT</p>
       <h1 style="font-size:22px;margin:0 0 6px">${esc(host)} · ${report.score}/100 (${report.grade})</h1>
       <p style="margin:0 0 16px;color:#a9c7b4">${esc(headline)}</p>
+      ${report.changes ? `<p style="margin:0 0 16px;color:#ffc261">What changed overnight: ${esc(changeLine(report.changes))}</p>` : ""}
       <ul style="padding-left:18px;margin:0 0 20px">${top.map((f) => `<li>${esc(f.title)}</li>`).join("")}</ul>
       <a href="${link}" style="display:inline-block;background:#5cffa1;color:#05070d;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:700">Open the full report</a>
     </div>`;
