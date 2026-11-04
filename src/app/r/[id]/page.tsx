@@ -1,11 +1,11 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Report from "@/components/Report";
-import Sky from "@/components/Sky";
-import Skyline from "@/components/Skyline";
 import { siteUrl } from "@/lib/site";
 import { getShift } from "@/lib/store";
+
+export const viewport: Viewport = { themeColor: "#f3ede1" };
 
 export async function generateMetadata({ params }: PageProps<"/r/[id]">): Promise<Metadata> {
   const report = await getShift((await params).id);
@@ -22,18 +22,23 @@ export default async function ReportPage({ params }: PageProps<"/r/[id]">) {
   const host = new URL(report.finalUrl).hostname;
 
   return (
-    <main className="relative min-h-dvh px-4 pb-[28vh] sm:px-6">
-      <Sky progress={1} dawn={1} />
-      <Skyline lit={0.82} dawn={1} fixed={false} />
-      <nav className="mx-auto flex max-w-4xl items-center justify-between py-5">
-        <Link href="/" className="min-h-10 text-sm font-bold tracking-[0.35em] text-phosphor glow">NOCTURN</Link>
-        <Link href={`/?url=${encodeURIComponent(host)}`} className="text-xs tracking-wider text-muted hover:text-phosphor">
+    <main className="tone-light relative min-h-dvh px-4 pb-20 text-ink-soft sm:px-6">
+      <div aria-hidden className="paper-bg pointer-events-none fixed inset-0 -z-10" />
+      <nav className="mx-auto flex max-w-5xl items-center justify-between gap-4 py-4">
+        <Link href="/" className="inline-flex min-h-11 items-center text-sm font-bold tracking-[0.35em] text-ink-soft">
+          NOCTURN
+        </Link>
+        <Link href={`/?url=${encodeURIComponent(host)}`} className="eyebrow inline-flex min-h-11 items-center text-[10px] text-ink-muted hover:text-ink-soft">
           Re-run this shift →
         </Link>
       </nav>
       <Report report={report} shareUrl={`${siteUrl()}/r/${report.id}`} />
-      <div className="mx-auto mt-8 max-w-4xl text-center">
-        <Link href="/" className="inline-flex min-h-12 items-center rounded-xl bg-phosphor px-6 text-sm font-bold tracking-wider text-ink hover:brightness-110">
+      <div className="mx-auto mt-14 max-w-5xl border-t border-ink-soft pt-8 text-center">
+        <p className="font-display text-3xl text-ink-soft italic sm:text-4xl">Want one for your app?</p>
+        <Link
+          href="/"
+          className="mt-5 inline-flex min-h-12 items-center rounded-full bg-ink-soft px-7 text-sm font-bold tracking-wider text-cream transition-colors hover:bg-ink-soft/85"
+        >
           RUN A NIGHT SHIFT ON YOUR APP →
         </Link>
       </div>
