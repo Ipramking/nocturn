@@ -1,5 +1,7 @@
 export function siteUrl(req?: Request) {
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
+  // Vercel sets this to the production domain at build and run time.
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
   if (req) {
     const u = new URL(req.url);
     return `${u.protocol}//${u.host}`;
