@@ -70,5 +70,22 @@ Env (never in chat or git): `GEMINI_API_KEY`, `DATABASE_URL`, `PSI_API_KEY` (opt
 - [ ] Deploy (with owner's OK), submit at app.vibestarter.xyz/vibeathon/submit with the applying wallet
 - [ ] Mon: buffer, edits only
 
+## Phase 2 (decided 2026-11-04)
+Phase 1 core is built and verified locally (see commits). Next, in order:
+1. **Deploy** (with owner's OK): private repo, Vercel, env keys, Neon. Unblocks the leaky demo and the Telegram webhook.
+2. **Motion redesign** (inspo: e1genqq "motion studio" post; 3 more references pending from owner), using the `motion` library:
+   - CLOCK IN button morphs into the shift clock, which morphs into the score ring at sunrise
+   - the 7 checks as a fanned 3D card stack that flip and settle on springs as results land; tap a card to expand it into its findings (shared-element transition)
+   - **Night is dark, morning is light:** sunrise wipes the terminal into a bright editorial Morning Report (ghosted italic serif headline, mono eyebrows, pill filters All / Critical / Headers / Secrets…)
+   - optional sound, muted by default (night hum, tick per check, dawn chime) via Web Audio
+   - full `prefers-reduced-motion` fallbacks; phone + laptop
+3. **Ask the Night Engineer**: per-report chat grounded in its findings (Gemini). Every user message goes through the secrets scanner first; pasted keys are masked and the user is told to rotate.
+4. **Live Night Board**: anonymous ticker of recent shifts (framework/host type, issues caught), no URLs or names.
+5. **PWA**: manifest, icons, standalone install on phone and laptop.
+6. **Base / Farcaster mini app**: manifest at `/.well-known/farcaster.json` (owner signs account association), mini-app SDK ready call, report pages as embeddable mini-app cards.
+7. Base EAS shift log (optional, cut first).
+
+No native apps before the deadline; Capacitor wrappers only if there's traction after. No open chatroom.
+
 ## Cut order if behind
 Base attestation → Telegram → repo/contract checks → email. Never cut: real checks, time-lapse, Morning Report, share page.
