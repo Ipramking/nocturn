@@ -18,6 +18,7 @@ export const CHECK_LABELS: Record<CheckId, string> = {
   meta: "Share & SEO readiness",
   links: "Broken links",
   lighthouse: "Lighthouse (mobile)",
+  onchain: "Onchain (Base)",
 };
 
 export function result(

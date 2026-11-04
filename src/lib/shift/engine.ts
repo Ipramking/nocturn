@@ -22,6 +22,7 @@ const WEIGHTS: Record<CheckId, number> = {
   meta: 10,
   links: 10,
   lighthouse: 10,
+  onchain: 10,
 };
 
 export const CHECK_ORDER: CheckId[] = ["uptime", "tls", "headers", "secrets", "meta", "links", "lighthouse"];
