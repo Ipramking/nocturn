@@ -7,17 +7,22 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test \"tests/**/*.test.ts\""
+    "test": "node --test \"tests/**/*.test.ts\"",
+    "db:migrate": "node --env-file=.env.local scripts/db-migrate.mjs"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^1.2.0",
+    "@neon/config": "^1.10.1",
+    "@neon/env": "^1.6.9",
+    "@vercel/functions": "^3.10.6",
     "next": "16.4.4",
+    "pg": "^8.23.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
