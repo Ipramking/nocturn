@@ -2,7 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CheckId, CheckResult, ShiftEvent, ShiftReport } from "@/lib/shift/types";
+import { MotionConfig, motion } from "motion/react";
+import CheckDeck from "./CheckDeck";
+import NightBoard from "./NightBoard";
+import NightEngineer from "./NightEngineer";
 import Report from "./Report";
+import SoundToggle from "./SoundToggle";
+import { chime, startHum, stopHum, tick, unlockSound } from "./sound";
 import Sky from "./Sky";
 import Skyline from "./Skyline";
 import WatchPanel from "./WatchPanel";
@@ -14,6 +20,7 @@ const CHECKS: Array<{ id: CheckId; label: string; hint: string }> = [
   { id: "secrets", label: "Leaked secrets", hint: "API keys shipped in your JS bundles" },
   { id: "meta", label: "Share & SEO", hint: "Share cards, viewport, title, favicon" },
   { id: "links", label: "Broken links", hint: "Internal pages that 404 or crash" },
+  { id: "onchain", label: "Onchain (Base)", hint: "Contracts your app talks to, leaked RPC keys" },
   { id: "lighthouse", label: "Lighthouse", hint: "Real mobile performance + accessibility" },
 ];
 
@@ -69,6 +76,8 @@ export default function Nocturn({ initialUrl = "" }: { initialUrl?: string }) {
     const t = setTimeout(() => {
       setProgress(1);
       setPhase("dawn");
+      stopHum();
+      chime();
       window.history.replaceState(null, "", `/r/${report.id}`);
       setTimeout(() => setPhase("morning"), 2200);
     }, wait);
@@ -92,6 +101,8 @@ export default function Nocturn({ initialUrl = "" }: { initialUrl?: string }) {
     setReport(null);
     setProgress(0);
     setSkip(false);
+    unlockSound();
+    startHum();
     startedAt.current = Date.now();
     setPhase("running");
 
@@ -123,6 +134,7 @@ export default function Nocturn({ initialUrl = "" }: { initialUrl?: string }) {
           } else if (event.type === "log") say(event.line, event.level);
           else if (event.type === "check") {
             setResults((r) => ({ ...r, [event.result.check]: event.result }));
+            tick(event.result.status);
             const r = event.result;
             say(`${r.label}: ${r.summary}`, r.status === "fail" ? "error" : r.status === "warn" ? "warn" : "info");
           } else if (event.type === "done") {
@@ -133,6 +145,7 @@ export default function Nocturn({ initialUrl = "" }: { initialUrl?: string }) {
       }
     } catch (err) {
       setError((err as Error).message);
+      stopHum();
       setPhase("error");
     }
   };
@@ -148,13 +161,17 @@ export default function Nocturn({ initialUrl = "" }: { initialUrl?: string }) {
   const lit = phase === "idle" || phase === "error" ? 0.38 : 0.38 + (doneCount / CHECKS.length) * 0.55;
 
   return (
+    <MotionConfig reducedMotion="user">
     <main className="relative min-h-dvh px-4 pb-[28vh] sm:px-6">
       <Sky progress={phase === "idle" ? 0.18 : progress} dawn={dawn} />
       <Skyline lit={lit} dawn={dawn} />
 
       <nav className="mx-auto flex max-w-5xl items-center justify-between py-5">
         <button onClick={reset} className="min-h-10 text-sm font-bold tracking-[0.35em] text-phosphor glow">NOCTURN</button>
-        <span className="text-[11px] tracking-[0.25em] text-muted">VIBEATHON 02 · NIGHT SHIFT</span>
+        <span className="flex items-center gap-3">
+          <span className="hidden text-[11px] tracking-[0.25em] text-muted sm:inline">VIBEATHON 02 · NIGHT SHIFT</span>
+          <SoundToggle />
+        </span>
       </nav>
 
       {(phase === "idle" || phase === "error") && (
@@ -182,9 +199,9 @@ export default function Nocturn({ initialUrl = "" }: { initialUrl?: string }) {
               spellCheck={false}
               className="min-h-12 min-w-0 flex-1 rounded-xl bg-transparent px-4 text-base text-text placeholder:text-muted/50 focus:outline-none"
             />
-            <button className="min-h-12 rounded-xl bg-phosphor px-6 text-sm font-bold tracking-wider text-ink transition hover:brightness-110 active:scale-[.98]">
+            <motion.button layoutId="nocturn-hero" className="min-h-12 rounded-xl bg-phosphor px-6 text-sm font-bold tracking-wider text-ink transition-[filter] hover:brightness-110 active:scale-[.98]">
               CLOCK IN →
-            </button>
+            </motion.button>
           </form>
           {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
           <p className="mt-4 text-xs text-muted">Free · no wallet · no signup · read-only checks</p>
@@ -200,17 +217,22 @@ export default function Nocturn({ initialUrl = "" }: { initialUrl?: string }) {
             No app handy? Try a leaky demo →
           </button>
 
-          <ul className="mt-14 grid w-full grid-cols-1 gap-2 text-left sm:grid-cols-2">
-            {CHECKS.map((c) => (
-              <li key={c.id} className="panel flex items-start gap-3 rounded-xl px-4 py-3 sm:last:col-span-2">
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-phosphor" />
-                <span>
-                  <span className="block text-sm text-text">{c.label}</span>
-                  <span className="block text-xs text-muted">{c.hint}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-3 text-xs">
+            <a href="/sample" className="inline-flex min-h-10 items-center text-phosphor underline-offset-4 hover:underline">See a sample Morning Report →</a>
+            <span className="inline-flex items-center gap-2 text-muted">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/badge/nocturn-fawn.vercel.app" alt="NOCTURN&apos;s own latest night shift score" height={24} className="h-6 w-auto" />
+              NOCTURN runs its own night shift
+            </span>
+          </div>
+
+          <div className="mt-14 w-full">
+            <CheckDeck checks={CHECKS} mode="idle" />
+          </div>
+
+          <div className="mt-12 w-full text-left">
+            <NightBoard />
+          </div>
         </section>
       )}
 
@@ -218,26 +240,12 @@ export default function Nocturn({ initialUrl = "" }: { initialUrl?: string }) {
         <section className="mx-auto max-w-5xl pt-[4vh]" aria-live="polite">
           <div className="text-center">
             <p className="text-[11px] tracking-[0.35em] text-phosphor">{phase === "dawn" ? "SUNRISE" : "NIGHT SHIFT IN PROGRESS"} · {host}</p>
-            <p className="mt-3 font-display text-7xl tabular-nums text-text glow sm:text-8xl">{clockAt(progress)}</p>
+            <motion.div layoutId="nocturn-hero" className="mx-auto mt-3 inline-block rounded-3xl px-6">
+              <p className="font-display text-7xl tabular-nums text-text glow sm:text-8xl">{clockAt(progress)}</p>
+            </motion.div>
           </div>
-          <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.25fr]">
-            <ol className="panel rounded-2xl p-4">
-              {CHECKS.map((c) => {
-                const r = results[c.id];
-                const state = r ? r.status : "working";
-                const color =
-                  state === "pass" ? "text-phosphor" : state === "warn" ? "text-amber" : state === "fail" ? "text-danger" : "text-muted";
-                return (
-                  <li key={c.id} className="flex items-center justify-between gap-3 border-b border-line/60 py-2.5 last:border-0">
-                    <span className="flex min-w-0 items-center gap-3">
-                      <span className={`h-2 w-2 shrink-0 rounded-full ${r ? (state === "pass" ? "bg-phosphor" : state === "warn" ? "bg-amber" : state === "fail" ? "bg-danger" : "bg-line") : "animate-pulse bg-phosphor/50"}`} />
-                      <span className="truncate text-sm">{c.label}</span>
-                    </span>
-                    <span className={`shrink-0 text-xs uppercase ${color}`}>{r ? (r.status === "skipped" ? "skipped" : r.score) : "on it"}</span>
-                  </li>
-                );
-              })}
-            </ol>
+          <div className="mt-8 flex flex-col gap-5">
+            <CheckDeck checks={CHECKS} results={results} mode="shift" finished={Boolean(report)} />
             <div ref={terminal} className="panel scanlines h-72 overflow-y-auto rounded-2xl p-4 text-[13px] leading-relaxed lg:h-auto lg:max-h-[22rem]">
               {lines.map((l, i) => (
                 <p key={i} className={l.level === "error" ? "text-danger" : l.level === "warn" ? "text-amber" : "text-text/85"}>
@@ -259,7 +267,7 @@ export default function Nocturn({ initialUrl = "" }: { initialUrl?: string }) {
 
       {phase === "morning" && report && (
         <section className="mx-auto flex max-w-4xl flex-col gap-5 pt-4">
-          <Report report={report} shareUrl={`${window.location.origin}/r/${report.id}`} />
+          <Report report={report} sunrise shareUrl={`${window.location.origin}/r/${report.id}`} extras={<NightEngineer report={report} tone="light" />} />
           <WatchPanel url={report.finalUrl} lastShiftId={report.id} />
           <button onClick={reset} className="mx-auto min-h-11 text-sm text-muted hover:text-phosphor">
             ← Run another shift
@@ -267,5 +275,6 @@ export default function Nocturn({ initialUrl = "" }: { initialUrl?: string }) {
         </section>
       )}
     </main>
+    </MotionConfig>
   );
 }

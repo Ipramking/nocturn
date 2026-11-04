@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import BadgeEmbed from "./BadgeEmbed";
 import Sky from "./Sky";
 import Skyline from "./Skyline";
 
@@ -115,6 +116,14 @@ export default function WatchDashboard({ id }: { id: string }) {
                 )}
               </li>
             </ul>
+          </section>
+
+          <section className="panel rounded-2xl p-5 sm:p-7">
+            <p className="text-[11px] tracking-[0.3em] text-phosphor">BADGE</p>
+            <p className="mt-2 text-sm text-muted">Show your nightly score on your site or README.</p>
+            <div className="mt-3">
+              <BadgeEmbed origin={typeof window === "undefined" ? "" : window.location.origin} host={host} />
+            </div>
           </section>
 
           <section className="panel rounded-2xl p-5 sm:p-7">

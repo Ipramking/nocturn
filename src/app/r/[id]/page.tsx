@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import NightEngineer from "@/components/NightEngineer";
 import Report from "@/components/Report";
 import { siteUrl } from "@/lib/site";
 import { getShift } from "@/lib/store";
@@ -32,7 +33,7 @@ export default async function ReportPage({ params }: PageProps<"/r/[id]">) {
           Re-run this shift →
         </Link>
       </nav>
-      <Report report={report} shareUrl={`${siteUrl()}/r/${report.id}`} />
+      <Report report={report} shareUrl={`${siteUrl()}/r/${report.id}`} extras={<NightEngineer report={report} tone="light" />} />
       <div className="mx-auto mt-14 max-w-5xl border-t border-ink-soft pt-8 text-center">
         <p className="font-display text-3xl text-ink-soft italic sm:text-4xl">Want one for your app?</p>
         <Link
