@@ -17,13 +17,14 @@ Submit at app.vibestarter.xyz/vibeathon/submit, signed in with the wallet used t
 > 1. Sample report, no waiting: nocturn-fawn.vercel.app/sample
 > 2. "Try a leaky demo" on the home page: watch it catch three exposed keys (fake ones) as critical.
 > 3. Paste your own Vibeathon entry and press CLOCK IN.
-> 4. NOCTURN on itself scores 100/100, Lighthouse included.
+> 4. At the bottom of any report, ask the Night Engineer how to fix something (paste a key by mistake and it refuses to send it anywhere).
+> 5. NOCTURN on itself scores 100/100, Lighthouse included. Install it as an app from your browser menu.
 
 **AI tools it was built with:** Claude Code (Anthropic) built the app end to end: engine, UI, tests, deployment. Google Gemini runs inside the product to write each Morning Report and its fix prompts, with a lighter Gemini model as automatic fallback.
 
 ## Optional
-- **Repo:** github.com/Ipramking/nocturn (private right now; make it public before submitting if you want judges to read it)
-- **Demo video:** in progress (Remotion + Kokoro voice), add the link when it's up
+- **Repo:** https://github.com/Ipramking/nocturn (public)
+- **Demo video:** `~/nocturn-video/out/nocturn-demo-16x9.mp4` (Remotion, edge-tts voice, FFmpeg mix); upload it (YouTube unlisted or X) and paste the link
 - **Screenshot:** a Morning Report at 1440px (we'll export one)
 - **X handle:** if you make one for NOCTURN
 - **Fundable score link:** optional, shown to judges for information, not scored
