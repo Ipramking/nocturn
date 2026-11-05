@@ -1,7 +1,6 @@
+import { geminiGenerate } from "../gemini";
 import type { AiNotes, Finding, ShiftReport } from "./types";
 
-// The lite model takes over when the main one is overloaded (503) or rate-limited.
-const MODELS = [process.env.GEMINI_MODEL ?? "gemini-flash-latest", "gemini-flash-lite-latest"];
 const RANK = { critical: 0, high: 1, medium: 2, low: 3, info: 4 } as const;
 
 export function rankedFindings(report: ShiftReport): Finding[] {
@@ -74,20 +73,11 @@ Rules:
 - Evidence is already masked. Never invent or reconstruct a secret value.`;
 
   try {
-    let res: Response | null = null;
-    for (const model of MODELS) {
-      res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-goog-api-key": key },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: "application/json", temperature: 0.4 },
-        }),
-        signal: AbortSignal.timeout(25_000),
-      });
-      if (res.ok || ![429, 500, 503].includes(res.status)) break;
-    }
-    if (!res?.ok) return fallback;
+    const res = await geminiGenerate({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: "application/json", temperature: 0.4 },
+    });
+    if (!res) return fallback;
     const json = await res.json();
     const text: string | undefined = json?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!text) return fallback;

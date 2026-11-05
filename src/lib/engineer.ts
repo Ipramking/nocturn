@@ -11,7 +11,6 @@ export interface ChatMessage {
 export const MAX_MESSAGES = 12;
 export const MAX_CHARS = 2000;
 
-const MODELS = [process.env.GEMINI_MODEL ?? "gemini-flash-latest", "gemini-flash-lite-latest"];
 const RANK = { critical: 0, high: 1, medium: 2, low: 3, info: 4 } as const;
 const STOP = new Set(
   "how does did the and for fix fixing what why this that with about can should would could you your mine our its from into are was please tell explain there here get make help need want which when where who".split(" "),
@@ -146,21 +145,14 @@ export async function askEngineer(report: ShiftReport, messages: ChatMessage[]):
   if (!key) return fallbackReply(report, question);
 
   try {
-    let res: Response | null = null;
-    for (const model of MODELS) {
-      res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-goog-api-key": key },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: engineerBrief(report) }] },
-          contents: toContents(messages),
-          generationConfig: { temperature: 0.4 },
-        }),
-        signal: AbortSignal.timeout(20_000),
-      });
-      if (res.ok || ![429, 500, 503].includes(res.status)) break;
-    }
-    if (!res?.ok) return fallbackReply(report, question);
+    // Loaded lazily so the pure helpers in this file stay importable by node:test.
+    const { geminiGenerate } = await import("./gemini");
+    const res = await geminiGenerate({
+      systemInstruction: { parts: [{ text: engineerBrief(report) }] },
+      contents: toContents(messages),
+      generationConfig: { temperature: 0.4 },
+    });
+    if (!res) return fallbackReply(report, question);
     const json = await res.json();
     const parts: Array<{ text?: unknown; thought?: boolean }> = json?.candidates?.[0]?.content?.parts ?? [];
     const text = parts
