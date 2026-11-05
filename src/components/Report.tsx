@@ -292,7 +292,7 @@ export default function Report({
   });
 
   return (
-    <article className="relative mx-auto w-full max-w-5xl text-ink-soft">
+    <article className="relative mx-auto w-full max-w-5xl overflow-hidden rounded-[28px] bg-cream/[0.97] p-5 text-ink-soft shadow-[0_40px_120px_-40px_rgb(0_0_0/0.7)] ring-1 ring-black/5 sm:p-10">
       <header className="relative pt-4 sm:pt-8">
         {/* Ghosted masthead behind the header. */}
         <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-2 overflow-hidden select-none sm:-top-6">
