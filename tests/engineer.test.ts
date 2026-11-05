@@ -10,6 +10,7 @@ import type { Finding, ShiftReport } from "../src/lib/shift/types.ts";
 
 // Every key-shaped value is generated at runtime: realistic shape, never valid, nothing committed.
 const rand = (n: number) => randomBytes(n * 2).toString("base64").replace(/[^A-Za-z0-9]/g, "").slice(0, n);
+const pem = (edge: string) => ["-----" + edge, "PRIVATE", "KEY-----"].join(" ");
 const word = () => Array.from(randomBytes(3 + (randomBytes(1)[0] % 6)), (b) => String.fromCharCode(97 + (b % 26))).join("");
 const serviceRoleJwt = () =>
   `eyJhbGciOiJIUzI1NiJ9.${Buffer.from(JSON.stringify({ role: "service_role", iss: "supabase" })).toString("base64url")}.${rand(43)}`;
@@ -87,7 +88,7 @@ test("history redaction masks key-shaped tokens and leaves prose alone", () => {
     `old message with ${openai}`,
     `postgres://app:${dbPassword}@db.example.net/app`,
     `DB_PASSWORD=${envPassword}`,
-    `-----BEGIN PRIVATE KEY-----\n${rand(64)}\n-----END PRIVATE KEY-----`,
+    `${pem("BEGIN")}\n${rand(64)}\n${pem("END")}`,
   ].join("\n");
   const out = redactSecrets(history);
   for (const secret of [openai, dbPassword, envPassword]) assert.ok(!out.includes(secret), secret);
