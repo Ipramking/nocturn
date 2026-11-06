@@ -8,7 +8,7 @@ interface Created {
   channels: { email: boolean; telegram: boolean };
 }
 
-export default function WatchPanel({ url, lastShiftId }: { url: string; lastShiftId?: string }) {
+export default function WatchPanel({ url, lastShiftId, emailEnabled = false }: { url: string; lastShiftId?: string; emailEnabled?: boolean }) {
   const host = new URL(url).hostname;
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
@@ -23,7 +23,7 @@ export default function WatchPanel({ url, lastShiftId }: { url: string; lastShif
       const res = await fetch("/api/watch", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ url, email, lastShiftId }),
+        body: JSON.stringify({ url, email: emailEnabled ? email : "", lastShiftId }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Couldn't start the watch");
@@ -71,9 +71,11 @@ export default function WatchPanel({ url, lastShiftId }: { url: string; lastShif
       <p className="text-[11px] tracking-[0.3em] text-phosphor">NIGHT WATCH</p>
       <h3 className="mt-2 font-display text-2xl">Want this every morning?</h3>
       <p className="mt-2 text-sm leading-relaxed text-muted">
-        Put {host} on Night Watch. NOCTURN runs this shift every night and hands you the report when you wake up. Email and Telegram are optional.
+        Put {host} on Night Watch. NOCTURN runs this shift every night and hands you the report when you wake up. {emailEnabled ? "Email and Telegram are optional." : "Telegram is optional."}
       </p>
       <form onSubmit={start} className="mt-4 flex flex-col gap-2 sm:flex-row">
+        {emailEnabled && (
+          <>
         <label htmlFor="watch-email" className="sr-only">Email (optional)</label>
         <input
           id="watch-email"
@@ -85,6 +87,8 @@ export default function WatchPanel({ url, lastShiftId }: { url: string; lastShif
           onChange={(e) => setEmail(e.target.value)}
           className="min-h-11 min-w-0 flex-1 rounded-md border border-line bg-ink/70 px-3 text-sm text-text placeholder:text-muted/60 focus:border-phosphor focus:outline-none"
         />
+          </>
+        )}
         <button disabled={busy} className="min-h-11 rounded-md bg-phosphor px-4 text-sm font-bold text-ink transition hover:brightness-110 disabled:opacity-60">
           {busy ? "Clocking in…" : "Start Night Watch"}
         </button>

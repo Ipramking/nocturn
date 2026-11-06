@@ -39,7 +39,7 @@ const clockAt = (p: number) => {
   return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 };
 
-export default function Nocturn({ initialUrl = "" }: { initialUrl?: string }) {
+export default function Nocturn({ initialUrl = "", emailEnabled = false }: { initialUrl?: string; emailEnabled?: boolean }) {
   const [url, setUrl] = useState(initialUrl);
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState("");
@@ -268,7 +268,7 @@ export default function Nocturn({ initialUrl = "" }: { initialUrl?: string }) {
       {phase === "morning" && report && (
         <section className="mx-auto flex max-w-4xl flex-col gap-5 pt-4">
           <Report report={report} sunrise shareUrl={`${window.location.origin}/r/${report.id}`} extras={<NightEngineer report={report} tone="light" />} />
-          <WatchPanel url={report.finalUrl} lastShiftId={report.id} />
+          <WatchPanel url={report.finalUrl} lastShiftId={report.id} emailEnabled={emailEnabled} />
           <button onClick={reset} className="mx-auto min-h-11 text-sm text-muted hover:text-phosphor">
             ← Run another shift
           </button>
